@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Control Games - Menu</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Press+Start+2P">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Press Start 2P", monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 900px;
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            color: #FFD700;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            margin-bottom: 40px;
+            color: #a0a0a0;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+            max-width: 1200px;
+        }
+
+        .game-card {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border: 3px solid #444;
+            border-radius: 15px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            border-color: #FFD700;
+            box-shadow: 0 15px 40px rgba(255, 215, 0, 0.4);
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+
+        .game-card:hover::before {
+            left: 100%;
+        }
+
+        .game-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #FFD700;
+        }
+
+        .game-description {
+            font-size: 10px;
+            line-height: 1.6;
+            color: #cccccc;
+        }
+
+        .controls-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+
+        .controls-info h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #FFD700;
+        }
+
+        .controls-list {
+            font-size: 10px;
+            line-height: 2;
+            text-align: left;
+            display: inline-block;
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .status.connected {
+            display: block;
+            border: 2px solid #00ff00;
+        }
+
+        .status.disconnected {
+            display: block;
+            border: 2px solid #ff0000;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .connecting {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Voice Control Styles */
+        .voice-control-section {
+            margin: 30px 0;
+            padding: 25px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #FFD700;
+            border-radius: 15px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .voice-title {
+            font-size: 16px;
+            color: #FFD700;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .mic-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 4px solid #FFD700;
+            cursor: pointer;
+            font-size: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mic-button:hover:not(.listening) {
+            transform: scale(1.1);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.5);
+        }
+
+        .mic-button:active:not(.listening) {
+            transform: scale(0.95);
+        }
+
+        .mic-button.listening {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            border-color: #ff6b6b;
+            animation: micPulse 1.5s infinite;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.6);
+        }
+
+        @keyframes micPulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(255, 107, 107, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(255, 107, 107, 0.8);
+            }
+        }
+
+        .voice-feedback {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .voice-status {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-bottom: 5px;
+        }
+
+        .voice-transcript {
+            font-size: 14px;
+            color: #FFD700;
+            font-weight: bold;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .voice-confidence {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .game-match-indicator {
+            font-size: 12px;
+            color: #00ff00;
+            margin-top: 10px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            font-size: 10px;
+            margin-top: 10px;
+        }
+
+        .browser-unsupported {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        .voice-controls-hint {
+            font-size: 10px;
+            color: #a0a0a0;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        .wave-animation {
+            display: inline-block;
+            width: 4px;
+            height: 15px;
+            background: #FFD700;
+            margin: 0 2px;
+            border-radius: 2px;
+            animation: wave 1.2s infinite;
+        }
+
+        .wave-animation:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .wave-animation:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes wave {
+            0%, 100% {
+                height: 15px;
+            }
+            50% {
+                height: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">
+        <span id="statusText">Connecting to Eye Tracker...</span>
+    </div>
+
+    <div class="container">
+        <h1>🎮 EYE CONTROL GAMES 👁️</h1>
+        <p class="subtitle">Choose your game and control with your eyes!</p>
+
+        <div class="games-grid">
+            <div class="game-card" onclick="launchGame('dash')">
+                <div class="game-icon">🏎️</div>
+                <div class="game-title">DASH RACER</div>
+                <div class="game-description">
+                    Race through the track!<br>
+                    Look left/right to steer<br>
+                    Keep eyes open to accelerate<br>
+                    Blink to start
+                </div>
+            </div>
+
+            <div class="game-card" onclick="launchGame('shooter')">
+                <div class="game-icon">🎯</div>
+                <div class="game-title">TARGET SHOOTER</div>
+                <div class="game-description">
+                    Shoot all targets!<br>
+                    Move head/eyes to aim<br>
+                    Blink or wink to shoot<br>
+                    Score points & survive
+                </div>
+            </div>
+
+            <div class="game-card" onclick="launchGame('western')">
+                <div class="game-icon">🤠</div>
+                <div class="game-title">WESTERN SHOOTER</div>
+                <div class="game-description">
+                    Desert stickman battle!<br>
+                    Move head to aim crosshair<br>
+                    Blink to shoot enemies<br>
+                    Build combos & survive waves
+                </div>
+            </div>
+
+            <div class="game-card" onclick="launchGame('memory')">
+                <div class="game-icon">🧩</div>
+                <div class="game-title">MEMORY MATCH</div>
+                <div class="game-description">
+                    Find matching card pairs!<br>
+                    Move head to cursor<br>
+                    Blink to flip cards<br>
+                    Beat your best time
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Control Section -->
+        <div class="voice-control-section">
+            <div class="voice-title">🎤 VOICE GAME SELECTION</div>
+            <button class="mic-button" id="micButton" title="Click to speak game name">🎤</button>
+            <div class="voice-feedback">
+                <div class="voice-status" id="voiceStatus">Click the mic to speak!</div>
+                <div class="voice-transcript" id="voiceTranscript"></div>
+                <div class="voice-confidence" id="voiceConfidence"></div>
+                <div class="game-match-indicator" id="gameMatch"></div>
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+            <div class="voice-controls-hint">
+        // Game mapping configuration
+        const GAME_CONFIG = {
+            dash: {
+                url: 'index_eye_control.html',
+                keywords: ['dash', 'racer', 'racing', 'race'],
+                name: 'DASH RACER'
+            },
+            shooter: {
+                url: 'shooting_game.html',
+                keywords: ['shooter', 'shoot', 'target', 'shooting'],
+                name: 'TARGET SHOOTER'
+            },
+            western: {
+                url: 'western_shooter.html',
+                keywords: ['western', 'west', 'cowboy', 'stickman'],
+                name: 'WESTERN SHOOTER'
+            },
+            memory: {
+                url: 'memory_game.html',
+                keywords: ['memory', 'match', 'card', 'cards'],
+                name: 'MEMORY MATCH'
+            }
+        };
+
+        // Voice Recognition Manager
+        class VoiceGameSelector {
+            constructor() {
+                this.recognition = this.initializeRecognition();
+                this.isListening = false;
+                this.setupEventListeners();
+                this.checkBrowserSupport();
+            }
+
+            initializeRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                
+                if (!SpeechRecognition) {
+                    return null;
+                }
+
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                return recognition;
+            }
+
+            checkBrowserSupport() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                
+                if (!SpeechRecognition) {
+                    const micButton = document.getElementById('micButton');
+                    const unsupportedMsg = document.getElementById('unsupportedMessage');
+                    
+                    micButton.disabled = true;
+                    micButton.style.opacity = '0.5';
+                    micButton.style.cursor = 'not-allowed';
+                    
+                    unsupportedMsg.innerHTML = '<div class="browser-unsupported">❌ Speech Recognition not supported in this browser. Use Chrome, Edge, or Safari.</div>';
+                }
+            }
+
+            setupEventListeners() {
+                const micButton = document.getElementById('micButton');
+                
+                if (micButton) {
+                    micButton.addEventListener('click', () => this.toggleListening());
+                }
+
+                if (this.recognition) {
+                    this.recognition.addEventListener('start', () => this.onStart());
+                    this.recognition.addEventListener('result', (event) => this.onResult(event));
+                    this.recognition.addEventListener('end', () => this.onEnd());
+                    this.recognition.addEventListener('error', (event) => this.onError(event));
+                }
+            }
+
+            toggleListening() {
+                if (!this.recognition) return;
+
+                if (this.isListening) {
+                    this.recognition.stop();
+                } else {
+                    this.clearFeedback();
+                    this.recognition.start();
+                }
+            }
+
+            onStart() {
+                this.isListening = true;
+                const micButton = document.getElementById('micButton');
+                micButton.classList.add('listening');
+                
+                const status = document.getElementById('voiceStatus');
+                status.textContent = '🎤 Listening...';
+                status.style.color = '#FFD700';
+            }
+
+            onResult(event) {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                const displayText = finalTranscript || interimTranscript;
+                const isInterim = !finalTranscript;
+
+                this.updateTranscriptDisplay(displayText, isInterim);
+
+                // Check for game match when we have final results
+                if (finalTranscript) {
+                    const matchedGame = this.findGameMatch(finalTranscript.toLowerCase());
+                    if (matchedGame) {
+                        this.displayGameMatch(matchedGame);
+                    }
+                }
+            }
+
+            onEnd() {
+                this.isListening = false;
+                const micButton = document.getElementById('micButton');
+                micButton.classList.remove('listening');
+            }
+
+            onError(event) {
+                const errorMsg = document.getElementById('errorMessage');
+                
+                switch (event.error) {
+                    case 'network':
+                        errorMsg.textContent = '❌ Network error. Check your connection.';
+                        break;
+                    case 'no-speech':
+                        errorMsg.textContent = '❌ No speech detected. Please try again.';
+                        break;
+                    case 'audio-capture':
+                        errorMsg.textContent = '❌ Microphone not available. Check permissions.';
+                        break;
+                    default:
+                        errorMsg.textContent = `❌ Error: ${event.error}`;
+                }
+                
+                const status = document.getElementById('voiceStatus');
+                status.textContent = '🎤 Ready to listen';
+                status.style.color = '#a0a0a0';
+                
+                this.isListening = false;
+                const micButton = document.getElementById('micButton');
+                micButton.classList.remove('listening');
+            }
+
+            updateTranscriptDisplay(text, isInterim) {
+                const transcript = document.getElementById('voiceTranscript');
+                transcript.textContent = text;
+                
+                if (isInterim) {
+                    transcript.style.opacity = '0.7';
+                } else {
+                    transcript.style.opacity = '1';
+                }
+            }
+
+            findGameMatch(speech) {
+                let bestMatch = null;
+                let bestScore = 0;
+
+                for (const [gameId, config] of Object.entries(GAME_CONFIG)) {
+                    for (const keyword of config.keywords) {
+                        if (speech.includes(keyword.toLowerCase())) {
+                            const score = keyword.length / speech.length;
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMatch = gameId;
+                            }
+                        }
+                    }
+                }
+
+                return bestMatch;
+            }
+
+            displayGameMatch(gameId) {
+                const config = GAME_CONFIG[gameId];
+                const matchIndicator = document.getElementById('gameMatch');
+                
+                matchIndicator.innerHTML = `✅ Launching <strong>${config.name}</strong>...`;
+                matchIndicator.style.display = 'block';
+
+                // Haptic feedback if available
+                this.provideHapticFeedback();
+                
+                // Play sound notification
+                this.playNotificationSound();
+
+                // Launch game after brief delay
+                setTimeout(() => {
+                    this.launchGame(gameId);
+                }, 800);
+            }
+
+            launchGame(gameId) {
+                const config = GAME_CONFIG[gameId];
+                window.location.href = config.url;
+            }
+
+            provideHapticFeedback() {
+                if (navigator.vibrate) {
+                    navigator.vibrate(100);
+                }
+            }
+
+            playNotificationSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                } catch (e) {
+                    // Audio context not available, continue silently
+                }
+            }
+
+            clearFeedback() {
+                document.getElementById('voiceTranscript').textContent = '';
+                document.getElementById('voiceConfidence').textContent = '';
+                document.getElementById('gameMatch').textContent = '';
+                document.getElementById('errorMessage').textContent = '';
+            }
+        }
+
+        // Initialize voice selector
+        let voiceSelector;
+
+                Try saying: "Dash Racer", "Shooter", "Western", or "Memory Match"
+            </div>
+            <div id="unsupportedMessage"></div>
+        </div>
+
+        <div class="controls-info">
+            <h3>👁️ EYE CONTROLS</h3>
+            <div class="controls-list">
+                ✨ Move head/eyes to control cursor/steering<br>
+                😑 BLINK to start or shoot<br>
+                😉 LEFT WINK for special actions<br>
+                👀 Keep eyes open to move/accelerate
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function launchGame(gameType) {
+            if (gameType === 'dash') {
+                window.location.href = 'index_eye_control.html';
+            } else if (gameType === 'shooter') {
+                window.location.href = 'shooting_game.html';
+            } else if (gameType === 'western') {
+                window.location.href = 'western_shooter.html';
+            } else if (gameType === 'memory') {
+                window.location.href = 'memory_game.html';
+            }
+        }
+
+        // Check WebSocket connection
+        let ws;
+        let lastBlinkTime = 0;
+        let wsReconnectInterval = null;
+        
+        function handleBlinkAction() {
+            console.log('🛑 Handling blink action...');
+            
+            // Get currently hovered game card or active element
+            const hoverCard = document.querySelector('.game-card:hover');
+            
+            if (hoverCard) {
+                console.log('✅ Blink on hovered card, launching game');
+                // Trigger the onclick handler directly
+                const gameType = hoverCard.getAttribute('onclick').match(/'([^']+)'/)[1];
+                launchGame(gameType);
+            } else {
+                console.log('⚠️ No card hovered, launching first game');
+                // If no card is hovered, launch the first game
+                launchGame('dash');
+            }
+        }
+        
+        function connectWebSocket() {
+            try {
+                console.log('🔌 Attempting WebSocket connection to ws://localhost:8765');
+                ws = new WebSocket('ws://localhost:8765');
+                
+                ws.onopen = () => {
+                    console.log('✅ WebSocket connected');
+                    document.getElementById('status').className = 'status connected';
+                    document.getElementById('statusText').textContent = '✅ Eye Tracker Connected';
+                    
+                    // Clear reconnect interval if it was set
+                    if (wsReconnectInterval) {
+                        clearInterval(wsReconnectInterval);
+                        wsReconnectInterval = null;
+                    }
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        // Log all messages for debugging
+                        console.log('📡 WebSocket message received:', data);
+                        
+                        // Handle blink event for menu navigation
+                        // Check both 'blink' field and 'action' field
+                        if (data.action === 'blink' || data.blink === true) {
+                            const now = Date.now();
+                            console.log(`👁️ Blink event detected! (Last blink: ${now - lastBlinkTime}ms ago)`);
+                            
+                            // Debounce blinks to avoid multiple clicks (300ms minimum between blinks)
+                            if (now - lastBlinkTime > 300) {
+                                lastBlinkTime = now;
+                                console.log('✅ Blink accepted (past debounce window)');
+                                handleBlinkAction();
+                            } else {
+                                console.log('⏱️ Blink rejected (still in debounce window)');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('❌ Error parsing WebSocket message:', e);
+                    }
+                };
+                
+                ws.onclose = () => {
+                    console.log('🔌 WebSocket closed');
+                    document.getElementById('status').className = 'status disconnected';
+                    document.getElementById('statusText').textContent = '❌ Eye Tracker Disconnected';
+                    
+                    // Try to reconnect
+                    if (!wsReconnectInterval) {
+                        console.log('🔄 Scheduling reconnection attempt in 2 seconds...');
+                        wsReconnectInterval = setInterval(connectWebSocket, 2000);
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('❌ WebSocket error:', error);
+                    document.getElementById('status').className = 'status disconnected';
+                    document.getElementById('statusText').textContent = '❌ Start eye_websocket_server.py';
+                };
+            } catch (e) {
+                console.error('❌ WebSocket connection error:', e);
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('statusText').textContent = '❌ Start eye_websocket_server.py';
+            }
+        }
+
+        // Try to connect on load
+        window.addEventListener('load', () => {
+            console.log('📂 Page loaded, starting WebSocket connection...');
+            document.getElementById('status').className = 'status connecting';
+            setTimeout(connectWebSocket, 500);
+            
+            // Initialize voice selector
+            voiceSelector = new VoiceGameSelector();
+        });
+
+        // Keyboard shortcut: Space bar to toggle microphone
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && voiceSelector && voiceSelector.recognition) {
+                event.preventDefault();
+                voiceSelector.toggleListening();
+            }
+        });
+    </script>
+</body>
+</html>

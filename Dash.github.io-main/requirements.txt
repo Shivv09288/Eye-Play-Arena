@@ -1,0 +1,4 @@
+opencv-python
+mediapipe
+pyautogui
+numpystreamlit>=1.28.0

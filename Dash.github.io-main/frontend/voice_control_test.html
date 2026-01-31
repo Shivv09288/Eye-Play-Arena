@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Control Test Suite</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Press+Start+2P">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Press Start 2P", monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #FFD700;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            color: #FFD700;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-title {
+            font-size: 16px;
+            color: #FFD700;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+        }
+
+        .test-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 4px solid #666;
+        }
+
+        .test-item.pass {
+            border-left-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .test-item.fail {
+            border-left-color: #ff0000;
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .test-item.warning {
+            border-left-color: #ffaa00;
+            background: rgba(255, 170, 0, 0.1);
+        }
+
+        .test-item.pending {
+            border-left-color: #6699ff;
+            background: rgba(102, 153, 255, 0.1);
+        }
+
+        .test-label {
+            font-size: 12px;
+            color: #a0a0a0;
+            margin-bottom: 5px;
+        }
+
+        .test-status {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .test-detail {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 2px solid #FFD700;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: "Press Start 2P", monospace;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+        }
+
+        .btn.success {
+            background: linear-gradient(135deg, #00ff00 0%, #00aa00 100%);
+        }
+
+        .report {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+        }
+
+        .report-title {
+            font-size: 14px;
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .summary-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .summary-label {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 9px;
+            color: #0f0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        .mic-icon {
+            display: inline-block;
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .success-message {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .warning-message {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 VOICE CONTROL TEST SUITE</h1>
+
+        <!-- Browser Support Test -->
+        <div class="test-section">
+            <div class="test-title">1️⃣ BROWSER COMPATIBILITY</div>
+            <div class="test-item" id="test-browser">
+                <div class="test-label">Testing browser capabilities...</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+            <div class="test-item" id="test-https">
+                <div class="test-label">HTTPS/Security check...</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+        </div>
+
+        <!-- API Detection Test -->
+        <div class="test-section">
+            <div class="test-title">2️⃣ API DETECTION</div>
+            <div class="test-item" id="test-speech-api">
+                <div class="test-label">Web Speech API availability</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+            <div class="test-item" id="test-audio-api">
+                <div class="test-label">Web Audio API availability</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+            <div class="test-item" id="test-vibration-api">
+                <div class="test-label">Vibration API availability</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+        </div>
+
+        <!-- Microphone Permission Test -->
+        <div class="test-section">
+            <div class="test-title">3️⃣ MICROPHONE PERMISSION</div>
+            <div class="button-group">
+                <button class="btn success" onclick="testMicrophonePermission()">
+                    🎤 Test Microphone Access
+                </button>
+            </div>
+            <div class="test-item" id="test-microphone">
+                <div class="test-label">Microphone permission status</div>
+                <div class="test-status">⏳ PENDING - Click button above</div>
+                <div class="test-detail">Note: Your browser will ask for permission</div>
+            </div>
+        </div>
+
+        <!-- Speech Recognition Test -->
+        <div class="test-section">
+            <div class="test-title">4️⃣ SPEECH RECOGNITION</div>
+            <div class="button-group">
+                <button class="btn" onclick="testSpeechRecognition()">
+                    🎤 Test Speech Recognition
+                </button>
+                <button class="btn" onclick="testSpeechKeyword('dash')">
+                    Test "Dash"
+                </button>
+                <button class="btn" onclick="testSpeechKeyword('memory')">
+                    Test "Memory"
+                </button>
+            </div>
+            <div class="test-item" id="test-speech">
+                <div class="test-label">Speech recognition test</div>
+                <div class="test-status">⏳ PENDING - Click button to start</div>
+                <div class="test-detail">Speak a game name: "Dash", "Shooter", "Western", or "Memory"</div>
+            </div>
+            <div class="test-item" id="test-interim">
+                <div class="test-label">Interim results (live transcription)</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+            <div class="test-item" id="test-final">
+                <div class="test-label">Final results</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+        </div>
+
+        <!-- Game Matching Test -->
+        <div class="test-section">
+            <div class="test-title">5️⃣ GAME MATCHING</div>
+            <div class="button-group">
+                <button class="btn" onclick="testGameMatching('I want to play dash racer')">
+                    Test "Dash Racer"
+                </button>
+                <button class="btn" onclick="testGameMatching('shoot some targets')">
+                    Test "Shooter"
+                </button>
+                <button class="btn" onclick="testGameMatching('play memory game')">
+                    Test "Memory"
+                </button>
+                <button class="btn danger" onclick="testGameMatching('random text')">
+                    Test No Match
+                </button>
+            </div>
+            <div class="test-item" id="test-matching">
+                <div class="test-label">Game matching algorithm</div>
+                <div class="test-status">⏳ PENDING</div>
+                <div class="test-detail">Click buttons to test matching</div>
+            </div>
+        </div>
+
+        <!-- Audio Feedback Test -->
+        <div class="test-section">
+            <div class="test-title">6️⃣ AUDIO FEEDBACK</div>
+            <div class="button-group">
+                <button class="btn" onclick="testNotificationSound()">
+                    🔊 Play Notification Sound
+                </button>
+                <button class="btn" onclick="testErrorSound()">
+                    🔊 Play Error Sound
+                </button>
+            </div>
+            <div class="test-item" id="test-audio">
+                <div class="test-label">Audio notification playback</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+        </div>
+
+        <!-- Haptic Feedback Test -->
+        <div class="test-section">
+            <div class="test-title">7️⃣ HAPTIC FEEDBACK</div>
+            <div class="button-group">
+                <button class="btn" onclick="testHapticFeedback()">
+                    📱 Test Vibration (100ms)
+                </button>
+                <button class="btn" onclick="testHapticPattern()">
+                    📱 Test Vibration Pattern
+                </button>
+            </div>
+            <div class="test-item" id="test-haptic">
+                <div class="test-label">Haptic vibration feedback</div>
+                <div class="test-status">⏳ PENDING</div>
+                <div class="test-detail">Works on mobile devices and gamepads</div>
+            </div>
+        </div>
+
+        <!-- Full Integration Test -->
+        <div class="test-section">
+            <div class="test-title">8️⃣ FULL INTEGRATION</div>
+            <div class="button-group">
+                <button class="btn success" onclick="runFullTest()">
+                    🚀 Run Full Integration Test
+                </button>
+                <button class="btn" onclick="openGameMenu()">
+                    🎮 Go to Game Menu
+                </button>
+            </div>
+            <div class="test-item" id="test-integration">
+                <div class="test-label">Full system integration check</div>
+                <div class="test-status">⏳ PENDING</div>
+            </div>
+        </div>
+
+        <!-- Test Report -->
+        <div class="report" id="report" style="display: none;">
+            <div class="report-title">📊 TEST REPORT</div>
+            <div class="summary" id="summary"></div>
+            <div id="recommendations"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test results tracker
+        const testResults = {
+            browser: null,
+            https: null,
+            speechApi: null,
+            audioApi: null,
+            vibrationApi: null,
+            microphone: null,
+            speechRecognition: null,
+            gameMatching: null,
+            audioFeedback: null,
+            hapticFeedback: null,
+            integration: null
+        };
+
+        // Run all tests on page load
+        window.addEventListener('load', () => {
+            runBrowserTests();
+        });
+
+        // Browser Detection Tests
+        function runBrowserTests() {
+            // Test browser
+            const browserInfo = getBrowserInfo();
+            updateTest('test-browser', `Browser: ${browserInfo.name} ${browserInfo.version}`, 
+                       browserInfo.supported ? 'PASS' : 'FAIL');
+            testResults.browser = browserInfo.supported;
+
+            // Test HTTPS
+            const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+            updateTest('test-https', 
+                       `Protocol: ${window.location.protocol}`, 
+                       isHttps ? 'PASS' : 'WARNING');
+            testResults.https = isHttps;
+
+            // Test APIs
+            testSpeechApi();
+            testAudioApi();
+            testVibrationApi();
+        }
+
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            const browsers = [
+                { name: 'Chrome', pattern: /Chrome\/(\d+)/, supported: true },
+                { name: 'Edge', pattern: /Edg\/(\d+)/, supported: true },
+                { name: 'Safari', pattern: /Version\/(\d+).*Safari/, supported: true },
+                { name: 'Firefox', pattern: /Firefox\/(\d+)/, supported: true },
+                { name: 'Opera', pattern: /OPR\/(\d+)/, supported: true }
+            ];
+
+            for (const browser of browsers) {
+                const match = ua.match(browser.pattern);
+                if (match) {
+                    return { name: browser.name, version: match[1], supported: browser.supported };
+                }
+            }
+            return { name: 'Unknown', version: '?', supported: false };
+        }
+
+        function testSpeechApi() {
+            const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+            updateTest('test-speech-api', 
+                       supported ? 'Available (Web Speech API)' : 'Not available', 
+                       supported ? 'PASS' : 'FAIL');
+            testResults.speechApi = supported;
+        }
+
+        function testAudioApi() {
+            const supported = !!(window.AudioContext || window.webkitAudioContext);
+            updateTest('test-audio-api', 
+                       supported ? 'Available (Web Audio API)' : 'Not available', 
+                       supported ? 'PASS' : 'FAIL');
+            testResults.audioApi = supported;
+        }
+
+        function testVibrationApi() {
+            const supported = !!navigator.vibrate;
+            updateTest('test-vibration-api', 
+                       supported ? 'Available (Vibration API)' : 'Not available (normal on desktop)', 
+                       supported ? 'PASS' : 'WARNING');
+            testResults.vibrationApi = supported;
+        }
+
+        // Microphone Test
+        function testMicrophonePermission() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                updateTest('test-microphone', 'Speech API not available', 'FAIL');
+                testResults.microphone = false;
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            
+            recognition.onstart = () => {
+                updateTest('test-microphone', 'Microphone access granted ✅', 'PASS');
+                testResults.microphone = true;
+                recognition.abort();
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'not-allowed') {
+                    updateTest('test-microphone', 'Permission denied ❌', 'FAIL');
+                } else if (event.error === 'audio-capture') {
+                    updateTest('test-microphone', 'No microphone device found', 'FAIL');
+                } else {
+                    updateTest('test-microphone', `Error: ${event.error}`, 'FAIL');
+                }
+                testResults.microphone = false;
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                updateTest('test-microphone', `Error: ${e.message}`, 'FAIL');
+                testResults.microphone = false;
+            }
+        }
+
+        // Speech Recognition Test
+        function testSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                updateTest('test-speech', 'Speech API not available', 'FAIL');
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            let hasInterim = false;
+            let hasFinal = false;
+
+            updateTest('test-speech', 'Listening... Speak now!', 'PENDING');
+            updateTest('test-interim', 'Waiting for interim results...', 'PENDING');
+            updateTest('test-final', 'Waiting for final results...', 'PENDING');
+
+            recognition.onresult = (event) => {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    const confidence = (event.results[i][0].confidence * 100).toFixed(1);
+
+                    if (event.results[i].isFinal) {
+                        hasFinal = true;
+                        updateTest('test-final', 
+                                   `"${transcript}" (confidence: ${confidence}%)`, 
+                                   'PASS');
+                    } else {
+                        hasInterim = true;
+                        updateTest('test-interim', 
+                                   `"${transcript}"`, 
+                                   'PASS');
+                    }
+                }
+            };
+
+            recognition.onend = () => {
+                updateTest('test-speech', 
+                           `${hasFinal ? '✅ Recognition complete' : '❌ No speech detected'}`, 
+                           hasFinal ? 'PASS' : 'FAIL');
+                testResults.speechRecognition = hasFinal;
+            };
+
+            recognition.onerror = (event) => {
+                updateTest('test-speech', `Error: ${event.error}`, 'FAIL');
+                testResults.speechRecognition = false;
+            };
+
+            recognition.start();
+        }
+
+        function testSpeechKeyword(keyword) {
+            testSpeechRecognition();
+            console.log(`Testing keyword: ${keyword}`);
+        }
+
+        // Game Matching Test
+        function testGameMatching(speech) {
+            const GAME_CONFIG = {
+                dash: { keywords: ['dash', 'racer', 'racing', 'race'] },
+                shooter: { keywords: ['shooter', 'shoot', 'target', 'shooting'] },
+                western: { keywords: ['western', 'west', 'cowboy'] },
+                memory: { keywords: ['memory', 'match', 'card'] }
+            };
+
+            let bestMatch = null;
+            let bestScore = 0;
+
+            for (const [gameId, config] of Object.entries(GAME_CONFIG)) {
+                for (const keyword of config.keywords) {
+                    if (speech.toLowerCase().includes(keyword.toLowerCase())) {
+                        const score = keyword.length / speech.length;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = gameId;
+                        }
+                    }
+                }
+            }
+
+            const gameNames = {
+                dash: 'DASH RACER',
+                shooter: 'TARGET SHOOTER',
+                western: 'WESTERN SHOOTER',
+                memory: 'MEMORY MATCH'
+            };
+
+            const result = bestMatch ? `✅ Matched: ${gameNames[bestMatch]}` : '❌ No match found';
+            updateTest('test-matching', `"${speech}" → ${result}`, bestMatch ? 'PASS' : 'FAIL');
+            testResults.gameMatching = !!bestMatch;
+        }
+
+        // Audio Feedback Tests
+        function testNotificationSound() {
+            playSound(800, 0.2);
+            updateTest('test-audio', '🔊 Notification sound played', 'PASS');
+            testResults.audioFeedback = true;
+        }
+
+        function testErrorSound() {
+            playSound(300, 0.3);
+            updateTest('test-audio', '🔊 Error sound played', 'PASS');
+            testResults.audioFeedback = true;
+        }
+
+        function playSound(frequency, duration) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+
+                osc.frequency.value = frequency;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                console.error('Audio error:', e);
+            }
+        }
+
+        // Haptic Feedback Tests
+        function testHapticFeedback() {
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+                updateTest('test-haptic', '📱 Device vibrated (100ms)', 'PASS');
+                testResults.hapticFeedback = true;
+            } else {
+                updateTest('test-haptic', 'Vibration API not supported (normal on desktop)', 'WARNING');
+                testResults.hapticFeedback = false;
+            }
+        }
+
+        function testHapticPattern() {
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+                updateTest('test-haptic', '📱 Device vibrated (pattern: 100-50-100ms)', 'PASS');
+                testResults.hapticFeedback = true;
+            } else {
+                updateTest('test-haptic', 'Vibration not available', 'WARNING');
+            }
+        }
+
+        // Full Integration Test
+        function runFullTest() {
+            updateTest('test-integration', 'Running comprehensive system test...', 'PENDING');
+            
+            let allPassed = true;
+            
+            for (const [key, value] of Object.entries(testResults)) {
+                if (value === false) {
+                    allPassed = false;
+                    break;
+                }
+            }
+
+            const passed = Object.values(testResults).filter(v => v === true).length;
+            const failed = Object.values(testResults).filter(v => v === false).length;
+            const pending = Object.values(testResults).filter(v => v === null).length;
+
+            if (allPassed) {
+                updateTest('test-integration', '✅ All systems operational! Ready to use voice control.', 'PASS');
+            } else if (passed > failed) {
+                updateTest('test-integration', '⚠️ Most systems operational. Some features may be limited.', 'WARNING');
+            } else {
+                updateTest('test-integration', '❌ Critical systems not available.', 'FAIL');
+            }
+
+            showReport(passed, failed, pending);
+        }
+
+        // UI Helper Functions
+        function updateTest(elementId, message, status) {
+            const element = document.getElementById(elementId);
+            const statusMap = {
+                'PASS': '✅ PASS',
+                'FAIL': '❌ FAIL',
+                'WARNING': '⚠️ WARNING',
+                'PENDING': '⏳ PENDING'
+            };
+
+            const classMap = {
+                'PASS': 'pass',
+                'FAIL': 'fail',
+                'WARNING': 'warning',
+                'PENDING': 'pending'
+            };
+
+            element.className = `test-item ${classMap[status]}`;
+            element.querySelector('.test-status').textContent = statusMap[status];
+            element.querySelector('.test-detail').textContent = message;
+        }
+
+        function showReport(passed, failed, pending) {
+            const report = document.getElementById('report');
+            const summary = document.getElementById('summary');
+
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-value">${passed}</div>
+                    <div class="summary-label">Passed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${failed}</div>
+                    <div class="summary-label">Failed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">${pending}</div>
+                    <div class="summary-label">Pending</div>
+                </div>
+            `;
+
+            report.style.display = 'block';
+        }
+
+        function openGameMenu() {
+            window.location.href = 'game_menu.html';
+        }
+    </script>
+</body>
+</html>

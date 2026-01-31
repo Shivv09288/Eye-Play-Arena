@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Matching - Eye Control</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Press+Start+2P">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Press Start 2P", monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            color: white;
+            text-shadow: 3px 3px 0 black;
+            font-size: 14px;
+        }
+
+        .hud div {
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 3px solid #FFD700;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 120px);
+            grid-gap: 15px;
+            margin: 0 auto;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            opacity: 0.6;
+            transform: scale(0.9);
+        }
+
+        .card.hovered {
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+            transform: scale(1.1);
+        }
+
+        .card-face {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            border: 4px solid #FFD700;
+            font-size: 48px;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+        }
+
+        .card-back::before {
+            content: '?';
+            font-size: 64px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #cursor {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 1000;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+        }
+
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .menu-content {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            background: rgba(102, 126, 234, 0.9);
+            border-radius: 20px;
+            border: 4px solid #FFD700;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .menu-title {
+            font-size: 32px;
+            color: #FFD700;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 #000;
+        }
+
+        .menu-text {
+            font-size: 12px;
+            margin: 20px 0;
+            line-height: 2;
+        }
+
+        .blink-text {
+            font-size: 18px;
+            color: #00ff00;
+            animation: blink 1s infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: rgba(255, 69, 0, 0.9);
+            color: white;
+            border: 3px solid #FFD700;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: "Press Start 2P", monospace;
+            z-index: 300;
+            text-shadow: 2px 2px 0 black;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 99, 71, 1);
+            transform: scale(1.05);
+        }
+
+        .eye-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 10px;
+            font-size: 12px;
+            border: 2px solid #FFD700;
+            z-index: 300;
+        }
+
+        .celebration {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #FFD700;
+            text-shadow: 4px 4px 0 black;
+            z-index: 250;
+            animation: celebrate 2s ease-out;
+        }
+
+        @keyframes celebrate {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.3) rotate(180deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="goBack()">← MENU</button>
+    
+    <div class="eye-status" id="eyeStatus">👁️ CONNECTING...</div>
+
+    <svg id="cursor" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#FFD700" stroke-width="4"/>
+        <circle cx="50" cy="50" r="30" fill="none" stroke="#FFD700" stroke-width="3"/>
+        <circle cx="50" cy="50" r="10" fill="#FFD700"/>
+        <text x="50" y="60" text-anchor="middle" fill="#FFD700" font-size="20" font-weight="bold">👁️</text>
+    </svg>
+
+    <div class="game-container">
+        <div class="hud">
+            <div>⏱️ TIME: <span id="timer">0:00</span></div>
+            <div>🔄 MOVES: <span id="moves">0</span></div>
+            <div>✨ PAIRS: <span id="pairs">0/8</span></div>
+            <div>⭐ BEST: <span id="best">--</span></div>
+        </div>
+
+        <div class="grid-container" id="gridContainer"></div>
+    </div>
+
+    <div class="menu-overlay" id="startMenu">
+        <div class="menu-content">
+            <div class="menu-title">🧩 MEMORY MATCH 🧠</div>
+            <div class="menu-text">
+                🎯 Move head/eyes to hover cards<br>
+                😑 BLINK to flip card<br>
+                🧩 Match all pairs to win<br>
+                ⏱️ Beat your best time!<br>
+                🧠 Train your memory!
+            </div>
+            <div class="blink-text">👁️ BLINK TO START 👁️</div>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="gameOverMenu" style="display: none;">
+        <div class="menu-content">
+            <div class="menu-title">🎉 CONGRATULATIONS! 🎉</div>
+            <div class="menu-text">
+                Time: <span id="finalTime">0:00</span><br>
+                Moves: <span id="finalMoves">0</span><br>
+                <span id="newRecord" style="color: #FFD700; display: none;">🏆 NEW RECORD! 🏆</span><br>
+                <span id="score-saved-msg" style="color: #00ff00; font-size: 10px; margin-top: 10px; display: none;"></span>
+            </div>
+            <div class="blink-text">👁️ BLINK TO PLAY AGAIN 👁️</div>
+        </div>
+    </div>
+
+    <!-- User System -->
+    <script src="user_system.js"></script>
+    <script>
+        // Initialize user system for this game
+        initUserSystem('memory_match');
+    </script>
+
+    <script>
+        const emojis = ['🎮', '🎯', '🎲', '🎪', '🎨', '🎭', '🎸', '🎺'];
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let gameState = 'menu';
+        let bestTime = localStorage.getItem('memoryBestTime') || null;
+        
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let hoveredCard = null;
+        
+        let ws;
+        let lastBlinkTime = 0;
+        let eyeConnected = false;
+
+        if (bestTime) {
+            document.getElementById('best').textContent = formatTime(parseInt(bestTime));
+        }
+
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                eyeConnected = true;
+                document.getElementById('eyeStatus').textContent = '👁️ CONNECTED';
+                document.getElementById('eyeStatus').style.borderColor = '#00ff00';
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // Head position for smooth cursor control
+                if (data.head_x !== undefined && data.head_y !== undefined) {
+                    const targetX = data.head_x * window.innerWidth;
+                    const targetY = data.head_y * window.innerHeight;
+                    cursorX = cursorX * 0.4 + targetX * 0.6;
+                    cursorY = cursorY * 0.4 + targetY * 0.6;
+                }
+                // Fallback to direction
+                else if (data.direction) {
+                    const speed = 35;
+                    if (data.direction === 'left') cursorX = Math.max(0, cursorX - speed);
+                    if (data.direction === 'right') cursorX = Math.min(window.innerWidth, cursorX + speed);
+                    if (data.iris_y !== undefined) {
+                        const targetY = data.iris_y * window.innerHeight;
+                        cursorY = cursorY * 0.6 + targetY * 0.4;
+                    }
+                }
+                
+                cursorX = Math.max(0, Math.min(window.innerWidth, cursorX));
+                cursorY = Math.max(0, Math.min(window.innerHeight, cursorY));
+                
+                // Blink to flip card or start
+                if (data.action === 'blink' || data.blink === true) {
+                    const now = Date.now();
+                    if (now - lastBlinkTime > 500) {
+                        lastBlinkTime = now;
+                        handleBlink();
+                    }
+                }
+                
+                updateCursor();
+                checkCardHover();
+            };
+            
+            ws.onerror = () => {
+                eyeConnected = false;
+                document.getElementById('eyeStatus').textContent = '👁️ DISCONNECTED';
+                document.getElementById('eyeStatus').style.borderColor = '#ff0000';
+            };
+            
+            ws.onclose = () => {
+                eyeConnected = false;
+                document.getElementById('eyeStatus').textContent = '👁️ RECONNECTING';
+                document.getElementById('eyeStatus').style.borderColor = '#ffff00';
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function updateCursor() {
+            const cursor = document.getElementById('cursor');
+            cursor.style.left = (cursorX - 30) + 'px';
+            cursor.style.top = (cursorY - 30) + 'px';
+        }
+
+        function checkCardHover() {
+            if (gameState !== 'playing') return;
+            
+            const cardElements = document.querySelectorAll('.card:not(.matched)');
+            let newHoveredCard = null;
+            
+            cardElements.forEach((card) => {
+                const rect = card.getBoundingClientRect();
+                const isHovered = cursorX >= rect.left && cursorX <= rect.right &&
+                                cursorY >= rect.top && cursorY <= rect.bottom;
+                
+                if (isHovered) {
+                    card.classList.add('hovered');
+                    newHoveredCard = card;
+                } else {
+                    card.classList.remove('hovered');
+                }
+            });
+            
+            hoveredCard = newHoveredCard;
+        }
+
+        function handleBlink() {
+            if (gameState === 'menu') {
+                startGame();
+            } else if (gameState === 'gameover') {
+                restartGame();
+            } else if (gameState === 'playing' && hoveredCard) {
+                flipCard(hoveredCard);
+            }
+        }
+
+        function initGame() {
+            const cardPairs = [...emojis, ...emojis];
+            cardPairs.sort(() => Math.random() - 0.5);
+            
+            const gridContainer = document.getElementById('gridContainer');
+            gridContainer.innerHTML = '';
+            
+            cardPairs.forEach((emoji, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.emoji = emoji;
+                card.dataset.index = index;
+                
+                card.innerHTML = `
+                    <div class="card-face card-front">${emoji}</div>
+                    <div class="card-face card-back"></div>
+                `;
+                
+                card.addEventListener('click', () => flipCard(card));
+                gridContainer.appendChild(card);
+                cards.push(card);
+            });
+        }
+
+        function flipCard(card) {
+            if (flippedCards.length >= 2 || card.classList.contains('flipped') || 
+                card.classList.contains('matched')) return;
+            
+            card.classList.add('flipped');
+            flippedCards.push(card);
+            
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const emoji1 = card1.dataset.emoji;
+            const emoji2 = card2.dataset.emoji;
+            
+            if (emoji1 === emoji2) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                document.getElementById('pairs').textContent = `${matchedPairs}/8`;
+                
+                showCelebration('✨ MATCH! ✨');
+                flippedCards = [];
+                
+                if (matchedPairs === 8) {
+                    endGame();
+                }
+            } else {
+                setTimeout(() => {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                }, 1000);
+            }
+        }
+
+        function showCelebration(text) {
+            const div = document.createElement('div');
+            div.className = 'celebration';
+            div.textContent = text;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 2000);
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            document.getElementById('startMenu').style.display = 'none';
+            matchedPairs = 0;
+            moves = 0;
+            flippedCards = [];
+            cards = [];
+            
+            document.getElementById('moves').textContent = '0';
+            document.getElementById('pairs').textContent = '0/8';
+            
+            initGame();
+            startTimer();
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                document.getElementById('timer').textContent = formatTime(elapsed);
+            }, 100);
+        }
+
+        function endGame() {
+            gameState = 'gameover';
+            clearInterval(timerInterval);
+            
+            const finalTime = Date.now() - startTime;
+            document.getElementById('finalTime').textContent = formatTime(finalTime);
+            document.getElementById('finalMoves').textContent = moves;
+            
+            // Check for new record
+            if (!bestTime || finalTime < parseInt(bestTime)) {
+                bestTime = finalTime;
+                localStorage.setItem('memoryBestTime', bestTime);
+                document.getElementById('best').textContent = formatTime(finalTime);
+                document.getElementById('newRecord').style.display = 'block';
+            } else {
+                document.getElementById('newRecord').style.display = 'none';
+            }
+            
+            showCelebration('🎉 YOU WIN! 🎉');
+            
+            // Save score to MongoDB (lower time = better score, so use 10000 - time as score)
+            const scoreValue = Math.max(0, 10000 - Math.floor(finalTime / 100));
+            saveGameScore(finalTime, scoreValue);
+            
+            setTimeout(() => {
+                document.getElementById('gameOverMenu').style.display = 'flex';
+            }, 1500);
+        }
+        
+        async function saveGameScore(finalTime, scoreValue) {
+            const result = await saveScore(scoreValue, {
+                stats: {
+                    time_ms: finalTime,
+                    moves: moves,
+                    time_formatted: formatTime(finalTime)
+                }
+            });
+            
+            if (result.success && result.isNewHighScore) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '🏆 NEW HIGH SCORE! 🏆';
+                msgEl.style.display = 'block';
+            } else if (result.success) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '✅ Score Saved!';
+                msgEl.style.display = 'block';
+            }
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            startGame();
+        }
+
+        function goBack() {
+            window.location.href = 'game_menu.html';
+        }
+
+        // Mouse/touch fallback
+        document.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            updateCursor();
+            checkCardHover();
+        });
+
+        document.addEventListener('click', () => {
+            if (gameState === 'playing' && hoveredCard) {
+                flipCard(hoveredCard);
+            }
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') handleBlink();
+        });
+
+        // Initialize
+        connectWebSocket();
+        updateCursor();
+    </script>
+</body>
+</html>

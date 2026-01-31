@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target Shooter - Eye Control</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Press+Start+2P">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Press Start 2P", monospace;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #DEB887 100%);
+            overflow: hidden;
+            cursor: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #DEB887 100%);
+        }
+
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: 16px;
+            z-index: 100;
+        }
+
+        .ui div {
+            margin-bottom: 10px;
+        }
+
+        #crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            z-index: 1000;
+            transition: all 0.1s ease;
+        }
+
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .menu-content {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            border: 3px solid #FFD700;
+        }
+
+        .menu-title {
+            font-size: 32px;
+            color: #FFD700;
+            margin-bottom: 20px;
+        }
+
+        .menu-text {
+            font-size: 14px;
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+
+        .blink-text {
+            font-size: 18px;
+            color: #00ff00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: "Press Start 2P", monospace;
+            z-index: 300;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+
+        #ammo-bar {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #ammo-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff0000, #ffff00, #00ff00);
+            width: 100%;
+            transition: width 0.3s;
+        }
+
+        #ammo-text {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="goBack()">← MENU</button>
+    
+    <div class="ui">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>HEALTH: <span id="health">100</span></div>
+        <div>WAVE: <span id="wave">1</span></div>
+        <div>TARGETS: <span id="targets">0</span></div>
+    </div>
+
+    <div id="ammo-text">AMMO</div>
+    <div id="ammo-bar">
+        <div id="ammo-fill"></div>
+    </div>
+
+    <svg id="crosshair" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="30" fill="none" stroke="red" stroke-width="3"/>
+        <line x1="50" y1="10" x2="50" y2="35" stroke="red" stroke-width="3"/>
+        <line x1="50" y1="65" x2="50" y2="90" stroke="red" stroke-width="3"/>
+        <line x1="10" y1="50" x2="35" y2="50" stroke="red" stroke-width="3"/>
+        <line x1="65" y1="50" x2="90" y2="50" stroke="red" stroke-width="3"/>
+        <circle cx="50" cy="50" r="3" fill="red"/>
+    </svg>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="menu-overlay" id="startMenu">
+        <div class="menu-content">
+            <div class="menu-title">🎯 TARGET SHOOTER 🎯</div>
+            <div class="menu-text">
+                🎮 Move your head/eyes to aim<br>
+                😑 BLINK to shoot<br>
+                😉 LEFT WINK for rapid fire<br>
+                🎯 Hit all targets to progress<br>
+                ❤️ Don't let targets hit you!
+            </div>
+            <div class="blink-text">👁️ BLINK TO START 👁️</div>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="gameOverMenu" style="display: none;">
+        <div class="menu-content">
+            <div class="menu-title">GAME OVER!</div>
+            <div class="menu-text">
+                Final Score: <span id="finalScore">0</span><br>
+                Wave Reached: <span id="finalWave">1</span><br>
+                <span id="score-saved-msg" style="color: #00ff00; font-size: 10px; margin-top: 10px; display: none;"></span>
+            </div>
+            <div class="blink-text">👁️ BLINK TO RESTART 👁️</div>
+        </div>
+    </div>
+
+    <!-- User System -->
+    <script src="user_system.js"></script>
+    <script>
+        // Initialize user system for this game
+        initUserSystem('target_shooter');
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const crosshair = document.getElementById('crosshair');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Load bird images
+        const birdImages = [];
+        const birdPaths = [
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDEvMzEvMTNBiJxJAAADcklEQVRoge2aT2gTQRTGv5mku2lqY2NttVqsB0FQEDx48SB48OBJ0YMgePDiQfDgwYMHD4IHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYOg', // Green bird
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDEvMzEvMTNBiJxJAAADc0lEQVRoge2aT2gTQRTGv5mku2lqY2NttVqsB0FQEDx48SB48OBJ0YMgePDiQfDgwYMHD4IHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYMHDx48ePDgwYOg' // Beige/orange bird
+        ];
+        let imagesLoaded = 0;
+        
+        for (let i = 0; i < 2; i++) {
+            const img = new Image();
+            img.onload = () => {
+                imagesLoaded++;
+                console.log(`Bird image ${i + 1} loaded`);
+            };
+            img.onerror = () => {
+                console.log(`Failed to load bird ${i + 1}, using emoji fallback`);
+                imagesLoaded++;
+            };
+            // For now, we'll use emoji as fallback since we need actual image files
+            birdImages.push(null);
+        }
+
+        // Game state
+        let gameState = 'menu'; // menu, playing, gameOver, victory
+        let score = 0;
+        let health = 100;
+        let wave = 1;
+        let maxWaves = 10; // Total number of waves
+        let totalBirdsKilled = 0;
+        let ammo = 100;
+        let maxAmmo = 100;
+        let targets = [];
+        let bullets = [];
+        let particles = [];
+        let cursorX = canvas.width / 2;
+        let cursorY = canvas.height / 2;
+
+        // WebSocket connection
+        let ws;
+        let lastBlinkTime = 0;
+        let lastWinkTime = 0;
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                console.log('✅ Connected to eye tracker');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // Primary: Use head position for cursor control (more intuitive)
+                if (data.head_x !== undefined && data.head_y !== undefined) {
+                    // Map head position to screen coordinates
+                    // Direct mapping: move head right = cursor right
+                    const targetX = data.head_x * canvas.width;
+                    const targetY = data.head_y * canvas.height;
+                    
+                    // Smooth movement to reduce jitter
+                    cursorX = cursorX * 0.6 + targetX * 0.4;
+                    cursorY = cursorY * 0.6 + targetY * 0.4;
+                }
+                // Fallback: Use direction for horizontal movement
+                else if (data.direction) {
+                    const sensitivity = 25;
+                    if (data.direction === 'left') {
+                        cursorX = Math.max(0, cursorX - sensitivity);
+                    } else if (data.direction === 'right') {
+                        cursorX = Math.min(canvas.width, cursorX + sensitivity);
+                    }
+                    
+                    // Vertical movement based on iris position
+                    if (data.iris_y !== undefined && data.iris_y >= 0 && data.iris_y <= 1) {
+                        const targetY = data.iris_y * canvas.height;
+                        cursorY = cursorY * 0.7 + targetY * 0.3;
+                    }
+                }
+                
+                // Clamp cursor within bounds
+                cursorX = Math.max(0, Math.min(canvas.width, cursorX));
+                cursorY = Math.max(0, Math.min(canvas.height, cursorY));
+                
+                // Handle blink to shoot
+                if (data.action === 'blink' || data.blink === true) {
+                    const now = Date.now();
+                    if (now - lastBlinkTime > 500) {
+                        lastBlinkTime = now;
+                        handleBlink();
+                    }
+                }
+                
+                // Handle wink for rapid fire
+                if (data.wink === 'left' || data.action === 'wink') {
+                    const now = Date.now();
+                    if (now - lastWinkTime > 200) {
+                        lastWinkTime = now;
+                        if (gameState === 'playing') {
+                            shoot();
+                        }
+                    }
+                }
+                
+                updateCrosshair();
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('❌ Disconnected from eye tracker');
+                // Try to reconnect after 2 seconds
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function updateCrosshair() {
+            crosshair.style.left = (cursorX - 20) + 'px';
+            crosshair.style.top = (cursorY - 20) + 'px';
+        }
+
+        function handleBlink() {
+            if (gameState === 'menu') {
+                startGame();
+            } else if (gameState === 'gameOver') {
+                restartGame();
+            } else if (gameState === 'playing') {
+                shoot();
+            }
+        }
+
+        function shoot() {
+            if (gameState !== 'playing' || ammo <= 0) return;
+            
+            ammo = Math.max(0, ammo - 10);
+            updateAmmoBar();
+            
+            bullets.push({
+                x: cursorX,
+                y: cursorY,
+                radius: 5,
+                life: 30
+            });
+            
+            // Check for hits
+            targets.forEach((target, index) => {
+                const dx = cursorX - target.x;
+                const dy = cursorY - target.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < target.radius + 20) {
+                    score += target.points;
+                    totalBirdsKilled++;
+                    createExplosion(target.x, target.y, target.color);
+                    targets.splice(index, 1);
+                    updateUI();
+                }
+            });
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            document.getElementById('startMenu').style.display = 'none';
+            score = 0;
+            health = 100;
+            wave = 1;
+            totalBirdsKilled = 0;
+            ammo = 100;
+            targets = [];
+            bullets = [];
+            lastBlinkTime = 0; // Reset blink debounce
+            lastWinkTime = 0; // Reset wink debounce
+            updateUI();
+            spawnWave();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            document.querySelector('.menu-title').textContent = 'GAME OVER!';
+            document.querySelector('.menu-title').style.color = '#FFD700';
+            startGame();
+        }
+
+        function gameOver() {
+            gameState = 'gameOver';
+            lastBlinkTime = 0; // Reset blink debounce so restart blink works immediately
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalWave').textContent = wave;
+            document.getElementById('gameOverMenu').style.display = 'flex';
+            
+            // Save score to MongoDB
+            saveGameScore();
+        }
+        
+        async function saveGameScore() {
+            const result = await saveScore(score, {
+                stats: {
+                    wave: wave,
+                    hits: score / 10, // Approximate hits
+                    game_result: gameState === 'victory' ? 'victory' : 'game_over'
+                }
+            });
+            
+            if (result.success && result.isNewHighScore) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '🏆 NEW HIGH SCORE! 🏆';
+                msgEl.style.display = 'block';
+            } else if (result.success) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '✅ Score Saved!';
+                msgEl.style.display = 'block';
+            }
+        }
+
+        function spawnWave() {
+            // 10-15 birds per wave, spawning slowly over time
+            const targetCount = 10 + Math.floor(Math.random() * 6); // Random 10-15 birds
+            for (let i = 0; i < targetCount; i++) {
+                setTimeout(() => {
+                    spawnTarget();
+                }, i * 2000); // Spawn every 2 seconds for slow, realistic arrival
+            }
+        }
+
+        function spawnTarget() {
+            const types = [
+                { emoji: '🐦', color: '#4CAF50', radius: 35, speed: 1.5, points: 10, health: 1, hat: '🎩' },
+                { emoji: '🐦', color: '#FF9800', radius: 35, speed: 2, points: 15, health: 1, hat: '🎩' },
+                { emoji: '🐦', color: '#2196F3', radius: 40, speed: 1, points: 20, health: 2, hat: '🎩' },
+                { emoji: '🐦', color: '#F44336', radius: 30, speed: 2.5, points: 25, health: 1, hat: '🎩' }
+            ];
+            
+            const type = types[Math.floor(Math.random() * types.length)];
+            const side = Math.random() < 0.5 ? 'left' : 'right';
+            const angle = Math.random() * Math.PI * 2;
+            
+            targets.push({
+                x: side === 'left' ? -50 : canvas.width + 50,
+                y: Math.random() * (canvas.height - 200) + 100,
+                targetX: Math.random() * canvas.width,
+                targetY: Math.random() * canvas.height,
+                angle: angle,
+                flip: side === 'left' ? 1 : -1,
+                ...type
+            });
+            
+            updateUI();
+        }
+
+        function updateTargets() {
+            targets.forEach((target, index) => {
+                // Move towards random position
+                const dx = target.targetX - target.x;
+                const dy = target.targetY - target.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 5) {
+                    target.x += (dx / distance) * target.speed;
+                    target.y += (dy / distance) * target.speed;
+                } else {
+                    target.targetX = Math.random() * canvas.width;
+                    target.targetY = Math.random() * canvas.height;
+                }
+                
+                // Check if target hits player (center of screen)
+                const playerDist = Math.sqrt(
+                    Math.pow(target.x - canvas.width / 2, 2) + 
+                    Math.pow(target.y - canvas.height / 2, 2)
+                );
+                
+                if (playerDist < target.radius + 50) {
+                    health -= 10;
+                    createExplosion(target.x, target.y, '#ff0000');
+                    targets.splice(index, 1);
+                    updateUI();
+                    
+                    if (health <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+            
+            // Check if wave complete
+            if (targets.length === 0 && gameState === 'playing') {
+                if (wave >= maxWaves) {
+                    // Victory - all waves completed!
+                    setTimeout(() => {
+                        gameState = 'victory';
+                        document.getElementById('gameOverMenu').style.display = 'flex';
+                        document.getElementById('finalScore').textContent = score;
+                        document.getElementById('finalWave').textContent = wave;
+                        document.querySelector('.menu-title').textContent = '🏆 VICTORY! 🏆';
+                        document.querySelector('.menu-title').style.color = '#FFD700';
+                        
+                        // Save score to MongoDB
+                        saveGameScore();
+                    }, 1000);
+                } else {
+                    wave++;
+                    ammo = Math.min(maxAmmo, ammo + 30);
+                    updateUI();
+                    updateAmmoBar();
+                    setTimeout(spawnWave, 2000);
+                }
+            }
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                bullet.life--;
+                return bullet.life > 0;
+            });
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 30,
+                    color
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // gravity
+                p.life--;
+                return p.life > 0;
+            });
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = 'rgba(135, 206, 235, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 5; i++) {
+                const x = (Date.now() * 0.01 + i * 300) % (canvas.width + 200) - 100;
+                ctx.beginPath();
+                ctx.arc(x, 100 + i * 50, 40, 0, Math.PI * 2);
+                ctx.arc(x + 30, 100 + i * 50, 50, 0, Math.PI * 2);
+                ctx.arc(x + 60, 100 + i * 50, 40, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw bird targets
+            targets.forEach(target => {
+                ctx.save();
+                ctx.translate(target.x, target.y);
+                
+                // Flip bird based on direction
+                if (target.flip === -1) {
+                    ctx.scale(-1, 1);
+                }
+                
+                // Calculate bobbing animation
+                const bob = Math.sin(Date.now() * 0.005 + target.angle) * 5;
+                ctx.translate(0, bob);
+                
+                // Draw bird body
+                ctx.fillStyle = target.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, target.radius, target.radius * 0.8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw wing
+                ctx.fillStyle = target.color;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                const wingFlap = Math.sin(Date.now() * 0.01) * 10;
+                ctx.ellipse(-target.radius * 0.3, 0, target.radius * 0.4, target.radius * 0.6, wingFlap * Math.PI / 180, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // Draw belly
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.ellipse(0, target.radius * 0.2, target.radius * 0.5, target.radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw eye
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(target.radius * 0.4, -target.radius * 0.2, target.radius * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(target.radius * 0.45, -target.radius * 0.2, target.radius * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(target.radius * 0.5, -target.radius * 0.25, target.radius * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw beak
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo(target.radius * 0.7, 0);
+                ctx.lineTo(target.radius * 0.9, -target.radius * 0.1);
+                ctx.lineTo(target.radius * 0.9, target.radius * 0.1);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Draw hat
+                ctx.fillStyle = '#000';
+                // Hat brim
+                ctx.fillRect(-target.radius * 0.4, -target.radius * 0.8, target.radius * 0.8, target.radius * 0.1);
+                // Hat top
+                ctx.fillRect(-target.radius * 0.3, -target.radius * 1.1, target.radius * 0.6, target.radius * 0.3);
+                // Hat band
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-target.radius * 0.3, -target.radius * 0.85, target.radius * 0.6, target.radius * 0.08);
+                
+                ctx.restore();
+            });
+            
+            // Draw bullets
+            bullets.forEach(bullet => {
+                ctx.fillStyle = `rgba(255, 255, 0, ${bullet.life / 30})`;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('health').textContent = health;
+            document.getElementById('wave').textContent = wave;
+            document.getElementById('targets').textContent = targets.length;
+        }
+
+        function updateAmmoBar() {
+            const percent = (ammo / maxAmmo) * 100;
+            document.getElementById('ammo-fill').style.width = percent + '%';
+        }
+
+        function gameLoop() {
+            if (gameState === 'playing') {
+                updateTargets();
+                updateBullets();
+                updateParticles();
+                
+                // Regenerate ammo
+                if (ammo < maxAmmo) {
+                    ammo = Math.min(maxAmmo, ammo + 0.1);
+                    updateAmmoBar();
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function goBack() {
+            window.location.href = 'game_menu.html';
+        }
+
+        // Mouse fallback for testing
+        canvas.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            updateCrosshair();
+        });
+
+        canvas.addEventListener('click', shoot);
+
+        // Keyboard controls for testing
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') handleBlink();
+            if (e.key === 'ArrowLeft') cursorX = Math.max(0, cursorX - 20);
+            if (e.key === 'ArrowRight') cursorX = Math.min(canvas.width, cursorX + 20);
+            if (e.key === 'ArrowUp') cursorY = Math.max(0, cursorY - 20);
+            if (e.key === 'ArrowDown') cursorY = Math.min(canvas.height, cursorY + 20);
+            updateCrosshair();
+        });
+
+        // Initialize
+        connectWebSocket();
+        updateCrosshair();
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Western Stickman Shooter - Eye Control</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Press+Start+2P">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: "Press Start 2P", monospace;
+            background: #D4A574;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E8D4A0 40%, #D4A574 100%);
+            cursor: crosshair;
+        }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 3px 3px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black;
+            font-size: 14px;
+            z-index: 100;
+            line-height: 1.8;
+        }
+
+        .hud-right {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            text-shadow: 3px 3px 0 black, -1px -1px 0 black, 1px -1px 0 black, -1px 1px 0 black;
+            font-size: 14px;
+            z-index: 100;
+            text-align: right;
+            line-height: 1.8;
+        }
+
+        #crosshair {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            pointer-events: none;
+            z-index: 1000;
+            filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
+        }
+
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .menu-content {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            background: rgba(139, 69, 19, 0.9);
+            border-radius: 15px;
+            border: 4px solid #FFD700;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .menu-title {
+            font-size: 28px;
+            color: #FFD700;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 #8B4513;
+        }
+
+        .menu-text {
+            font-size: 12px;
+            margin: 20px 0;
+            line-height: 2;
+        }
+
+        .blink-text {
+            font-size: 16px;
+            color: #00ff00;
+            animation: blink 1s infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(139, 69, 19, 0.9);
+            color: white;
+            border: 3px solid #FFD700;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: "Press Start 2P", monospace;
+            z-index: 300;
+            text-shadow: 2px 2px 0 black;
+        }
+
+        .back-button:hover {
+            background: rgba(184, 134, 11, 0.9);
+            transform: scale(1.05);
+        }
+
+        .combo-text {
+            position: absolute;
+            font-size: 20px;
+            color: #FFD700;
+            text-shadow: 3px 3px 0 black;
+            pointer-events: none;
+            animation: comboFloat 1s ease-out forwards;
+            z-index: 150;
+        }
+
+        @keyframes comboFloat {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+
+        .damage-text {
+            position: absolute;
+            font-size: 16px;
+            color: #ff0000;
+            text-shadow: 2px 2px 0 black;
+            pointer-events: none;
+            animation: damageFloat 0.8s ease-out forwards;
+            z-index: 150;
+        }
+
+        @keyframes damageFloat {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+
+        .wave-announcement {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: #FFD700;
+            text-shadow: 4px 4px 0 black;
+            z-index: 180;
+            animation: waveAnnounce 2s ease-out forwards;
+        }
+
+        @keyframes waveAnnounce {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="goBack()">← MENU</button>
+    
+    <div class="hud">
+        <div>💰 SCORE: <span id="score">0</span></div>
+        <div>🎯 KILLS: <span id="kills">0</span></div>
+        <div>🌊 WAVE: <span id="wave">1</span></div>
+        <div>🔥 COMBO: <span id="combo">0</span>x</div>
+    </div>
+
+    <div class="hud-right">
+        <div>❤️ HEALTH: <span id="health">100</span></div>
+        <div>🎯 ACCURACY: <span id="accuracy">0</span>%</div>
+        <div>👁️ <span id="eyeStatus">CONNECTING</span></div>
+    </div>
+
+    <svg id="crosshair" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="35" fill="none" stroke="#ff0000" stroke-width="4"/>
+        <circle cx="50" cy="50" r="25" fill="none" stroke="#ff0000" stroke-width="3"/>
+        <line x1="50" y1="5" x2="50" y2="30" stroke="#ff0000" stroke-width="4"/>
+        <line x1="50" y1="70" x2="50" y2="95" stroke="#ff0000" stroke-width="4"/>
+        <line x1="5" y1="50" x2="30" y2="50" stroke="#ff0000" stroke-width="4"/>
+        <line x1="70" y1="50" x2="95" y2="50" stroke="#ff0000" stroke-width="4"/>
+        <circle cx="50" cy="50" r="4" fill="#ff0000"/>
+    </svg>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="menu-overlay" id="startMenu">
+        <div class="menu-content">
+            <div class="menu-title">🤠 WESTERN SHOOTER 🔫</div>
+            <div class="menu-text">
+                🎯 Move head/eyes to aim<br>
+                😑 BLINK to shoot enemies<br>
+                😉 LEFT WINK for auto-fire<br>
+                💀 Eliminate all enemies<br>
+                ❤️ Don't let them damage you!<br>
+                🔥 Build combos for bonus points!
+            </div>
+            <div class="blink-text">👁️ BLINK TO START 👁️</div>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="gameOverMenu" style="display: none;">
+        <div class="menu-content">
+            <div class="menu-title">☠️ GAME OVER ☠️</div>
+            <div class="menu-text">
+                Final Score: <span id="finalScore">0</span><br>
+                Kills: <span id="finalKills">0</span><br>
+                Wave Reached: <span id="finalWave">1</span><br>
+                Best Combo: <span id="bestCombo">0</span>x<br>
+                Accuracy: <span id="finalAccuracy">0</span>%<br>
+                <span id="score-saved-msg" style="color: #00ff00; font-size: 10px; margin-top: 10px; display: none;"></span>
+            </div>
+            <div class="blink-text">👁️ BLINK TO RESTART 👁️</div>
+        </div>
+    </div>
+
+    <!-- User System -->
+    <script src="user_system.js"></script>
+    <script>
+        // Initialize user system for this game
+        initUserSystem('western_shooter');
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const crosshair = document.getElementById('crosshair');
+
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Game state
+        let gameState = 'menu';
+        let score = 0;
+        let health = 100;
+        let wave = 1;
+        let kills = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let lastKillTime = 0;
+        let comboTimeout = null;
+        let shotsFired = 0;
+        let shotsHit = 0;
+        
+        let enemies = [];
+        let bullets = [];
+        let particles = [];
+        let buildings = [];
+        let clouds = [];
+        
+        let cursorX = canvas.width / 2;
+        let cursorY = canvas.height / 2;
+        
+        let autoFire = false;
+        let lastAutoFireTime = 0;
+
+        // WebSocket
+        let ws;
+        let lastBlinkTime = 0;
+        let lastWinkTime = 0;
+        let eyeConnected = false;
+
+        // Enemy types
+        const enemyTypes = [
+            { color: '#333', speed: 0.5, health: 30, points: 10, size: 25 },
+            { color: '#555', speed: 1.0, health: 50, points: 20, size: 30 },
+            { color: '#8B4513', speed: 0.3, health: 80, points: 30, size: 35 },
+            { color: '#000', speed: 1.5, health: 20, points: 15, size: 20 },
+        ];
+
+        // Initialize environment
+        function initEnvironment() {
+            // Create buildings
+            buildings = [];
+            const buildingCount = 8;
+            for (let i = 0; i < buildingCount; i++) {
+                const x = (i / buildingCount) * canvas.width;
+                const width = canvas.width / buildingCount;
+                const height = 100 + Math.random() * 150;
+                const floors = Math.floor(height / 30);
+                buildings.push({ x, width, height, floors, color: '#D2691E' });
+            }
+
+            // Create clouds
+            clouds = [];
+            for (let i = 0; i < 5; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: 50 + Math.random() * 100,
+                    radius: 30 + Math.random() * 20,
+                    speed: 0.1 + Math.random() * 0.2
+                });
+            }
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8765');
+            
+            ws.onopen = () => {
+                console.log('✅ Connected to eye tracker');
+                eyeConnected = true;
+                document.getElementById('eyeStatus').textContent = 'CONNECTED';
+                document.getElementById('eyeStatus').style.color = '#00ff00';
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // Head position for cursor control
+                if (data.head_x !== undefined && data.head_y !== undefined) {
+                    const targetX = data.head_x * canvas.width;
+                    const targetY = data.head_y * canvas.height;
+                    cursorX = cursorX * 0.5 + targetX * 0.5;
+                    cursorY = cursorY * 0.5 + targetY * 0.5;
+                }
+                // Fallback to direction
+                else if (data.direction) {
+                    const sensitivity = 30;
+                    if (data.direction === 'left') {
+                        cursorX = Math.max(0, cursorX - sensitivity);
+                    } else if (data.direction === 'right') {
+                        cursorX = Math.min(canvas.width, cursorX + sensitivity);
+                    }
+                    if (data.iris_y !== undefined) {
+                        const targetY = data.iris_y * canvas.height;
+                        cursorY = cursorY * 0.7 + targetY * 0.3;
+                    }
+                }
+                
+                cursorX = Math.max(0, Math.min(canvas.width, cursorX));
+                cursorY = Math.max(0, Math.min(canvas.height, cursorY));
+                
+                // Blink to shoot
+                if (data.action === 'blink' || data.blink === true) {
+                    const now = Date.now();
+                    if (now - lastBlinkTime > 300) {
+                        lastBlinkTime = now;
+                        handleBlink();
+                    }
+                }
+                
+                // Left wink for auto-fire toggle
+                if (data.wink === 'left' || data.action === 'wink') {
+                    const now = Date.now();
+                    if (now - lastWinkTime > 500) {
+                        lastWinkTime = now;
+                        if (gameState === 'playing') {
+                            autoFire = !autoFire;
+                            showComboText(autoFire ? 'AUTO-FIRE ON!' : 'AUTO-FIRE OFF', canvas.width/2, 100, '#00ff00');
+                        }
+                    }
+                }
+                
+                updateCrosshair();
+            };
+            
+            ws.onerror = () => {
+                eyeConnected = false;
+                document.getElementById('eyeStatus').textContent = 'DISCONNECTED';
+                document.getElementById('eyeStatus').style.color = '#ff0000';
+            };
+            
+            ws.onclose = () => {
+                eyeConnected = false;
+                document.getElementById('eyeStatus').textContent = 'RECONNECTING';
+                document.getElementById('eyeStatus').style.color = '#ffff00';
+                setTimeout(connectWebSocket, 2000);
+            };
+        }
+
+        function updateCrosshair() {
+            crosshair.style.left = (cursorX - 25) + 'px';
+            crosshair.style.top = (cursorY - 25) + 'px';
+        }
+
+        function handleBlink() {
+            if (gameState === 'menu') {
+                startGame();
+            } else if (gameState === 'gameOver') {
+                restartGame();
+            } else if (gameState === 'playing') {
+                shoot();
+            }
+        }
+
+        function shoot() {
+            if (gameState !== 'playing') return;
+            
+            shotsFired++;
+            
+            // Create bullet effect
+            bullets.push({
+                x: cursorX,
+                y: cursorY,
+                radius: 8,
+                life: 20,
+                color: '#FFD700'
+            });
+            
+            // Check for hits
+            let hit = false;
+            enemies.forEach((enemy, index) => {
+                if (enemy.dead) return;
+                
+                const dx = cursorX - enemy.x;
+                const dy = cursorY - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < enemy.size + 20) {
+                    hit = true;
+                    shotsHit++;
+                    enemy.health -= 25;
+                    
+                    // Show damage
+                    showDamageText('-25', enemy.x, enemy.y - 30);
+                    
+                    // Hit particles
+                    createHitParticles(enemy.x, enemy.y, '#ff0000');
+                    
+                    if (enemy.health <= 0) {
+                        enemy.dead = true;
+                        kills++;
+                        combo++;
+                        maxCombo = Math.max(maxCombo, combo);
+                        
+                        // Combo bonus
+                        const comboBonus = combo > 1 ? combo * 5 : 0;
+                        const totalPoints = enemy.points + comboBonus;
+                        score += totalPoints;
+                        
+                        // Reset combo timer
+                        lastKillTime = Date.now();
+                        if (comboTimeout) clearTimeout(comboTimeout);
+                        comboTimeout = setTimeout(() => {
+                            combo = 0;
+                            updateUI();
+                        }, 3000);
+                        
+                        // Show combo text
+                        if (combo > 1) {
+                            showComboText(`${combo}x COMBO! +${totalPoints}`, enemy.x, enemy.y - 50, '#FFD700');
+                        }
+                        
+                        // Death explosion
+                        createExplosion(enemy.x, enemy.y, enemy.color);
+                        enemies.splice(index, 1);
+                    }
+                    
+                    updateUI();
+                }
+            });
+        }
+
+        function createHitParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5 - 2,
+                    life: 20 + Math.random() * 10,
+                    maxLife: 30,
+                    color: color,
+                    size: 3
+                });
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 25; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10 - 3,
+                    life: 30 + Math.random() * 20,
+                    maxLife: 50,
+                    color: color,
+                    size: 4 + Math.random() * 3
+                });
+            }
+        }
+
+        function showDamageText(text, x, y) {
+            const div = document.createElement('div');
+            div.className = 'damage-text';
+            div.textContent = text;
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 800);
+        }
+
+        function showComboText(text, x, y, color) {
+            const div = document.createElement('div');
+            div.className = 'combo-text';
+            div.textContent = text;
+            div.style.left = x + 'px';
+            div.style.top = y + 'px';
+            div.style.color = color;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 1000);
+        }
+
+        function showWaveAnnouncement(waveNum) {
+            const div = document.createElement('div');
+            div.className = 'wave-announcement';
+            div.textContent = `WAVE ${waveNum}`;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 2000);
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            document.getElementById('startMenu').style.display = 'none';
+            score = 0;
+            health = 100;
+            wave = 1;
+            kills = 0;
+            combo = 0;
+            maxCombo = 0;
+            shotsFired = 0;
+            shotsHit = 0;
+            enemies = [];
+            bullets = [];
+            particles = [];
+            autoFire = false;
+            lastBlinkTime = 0; // Reset blink debounce
+            lastWinkTime = 0; // Reset wink debounce
+            initEnvironment();
+            updateUI();
+            spawnWave();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverMenu').style.display = 'none';
+            startGame();
+        }
+
+        function gameOver() {
+            gameState = 'gameOver';
+            lastBlinkTime = 0; // Reset blink debounce so restart blink works immediately
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalKills').textContent = kills;
+            document.getElementById('finalWave').textContent = wave;
+            document.getElementById('bestCombo').textContent = maxCombo;
+            const accuracy = shotsFired > 0 ? Math.round((shotsHit / shotsFired) * 100) : 0;
+            document.getElementById('finalAccuracy').textContent = accuracy;
+            document.getElementById('gameOverMenu').style.display = 'flex';
+            
+            // Save score to MongoDB
+            saveGameScore(accuracy);
+        }
+        
+        async function saveGameScore(accuracy) {
+            const result = await saveScore(score, {
+                stats: {
+                    wave: wave,
+                    kills: kills,
+                    best_combo: maxCombo,
+                    accuracy: accuracy,
+                    shots_fired: shotsFired
+                }
+            });
+            
+            if (result.success && result.isNewHighScore) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '🏆 NEW HIGH SCORE! 🏆';
+                msgEl.style.display = 'block';
+            } else if (result.success) {
+                const msgEl = document.getElementById('score-saved-msg');
+                msgEl.textContent = '✅ Score Saved!';
+                msgEl.style.display = 'block';
+            }
+        }
+
+        function spawnWave() {
+            showWaveAnnouncement(wave);
+            const enemyCount = 3 + wave * 2;
+            
+            for (let i = 0; i < enemyCount; i++) {
+                setTimeout(() => {
+                    spawnEnemy();
+                }, i * 800);
+            }
+        }
+
+        function spawnEnemy() {
+            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            const side = Math.random() < 0.5 ? 'left' : 'right';
+            const groundY = canvas.height - 150;
+            
+            enemies.push({
+                x: side === 'left' ? -50 : canvas.width + 50,
+                y: groundY,
+                targetX: 100 + Math.random() * (canvas.width - 200),
+                targetY: groundY,
+                vx: 0,
+                vy: 0,
+                ...type,
+                maxHealth: type.health,
+                dead: false,
+                shootTimer: 0,
+                shootDelay: 2000 + Math.random() * 2000
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                if (enemy.dead) return;
+                
+                // Move towards target
+                const dx = enemy.targetX - enemy.x;
+                const dy = enemy.targetY - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 5) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                } else {
+                    // Pick new target
+                    enemy.targetX = 100 + Math.random() * (canvas.width - 200);
+                }
+                
+                // Enemy shoots player
+                enemy.shootTimer += 16;
+                if (enemy.shootTimer >= enemy.shootDelay) {
+                    enemy.shootTimer = 0;
+                    health -= 5;
+                    updateUI();
+                    
+                    // Flash effect
+                    canvas.style.filter = 'brightness(1.5)';
+                    setTimeout(() => canvas.style.filter = 'brightness(1)', 100);
+                    
+                    if (health <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+            
+            // Check if wave complete
+            if (enemies.length === 0 && gameState === 'playing') {
+                wave++;
+                updateUI();
+                setTimeout(spawnWave, 2000);
+            }
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                bullet.life--;
+                bullet.radius *= 0.95;
+                return bullet.life > 0;
+            });
+        }
+
+        function updateParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // gravity
+                p.life--;
+                return p.life > 0;
+            });
+        }
+
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x += cloud.speed;
+                if (cloud.x > canvas.width + cloud.radius) {
+                    cloud.x = -cloud.radius;
+                }
+            });
+        }
+
+        function drawBackground() {
+            // Sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.4, '#E8D4A0');
+            gradient.addColorStop(1, '#D4A574');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Sun
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(150, 100, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.radius * 0.7, cloud.y, cloud.radius * 0.8, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.radius * 1.4, cloud.y, cloud.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Ground
+            ctx.fillStyle = '#C19A6B';
+            ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+            
+            // Buildings
+            buildings.forEach(building => {
+                // Building body
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, canvas.height - 150 - building.height, building.width - 2, building.height);
+                
+                // Windows
+                ctx.fillStyle = '#333';
+                for (let floor = 0; floor < building.floors; floor++) {
+                    for (let window = 0; window < 3; window++) {
+                        const wx = building.x + (window + 0.5) * (building.width / 4);
+                        const wy = canvas.height - 150 - (floor + 1) * 30 + 10;
+                        ctx.fillRect(wx, wy, 10, 15);
+                    }
+                }
+                
+                // Roof
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.moveTo(building.x - 10, canvas.height - 150 - building.height);
+                ctx.lineTo(building.x + building.width/2, canvas.height - 150 - building.height - 20);
+                ctx.lineTo(building.x + building.width + 10, canvas.height - 150 - building.height);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        function drawStickman(x, y, size, color, health, maxHealth) {
+            // Health bar
+            const barWidth = size * 2;
+            const barHeight = 5;
+            const healthPercent = health / maxHealth;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(x - barWidth/2, y - size - 15, barWidth, barHeight);
+            ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+            ctx.fillRect(x - barWidth/2, y - size - 15, barWidth * healthPercent, barHeight);
+            
+            // Stickman body
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(x, y - size * 0.7, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Body
+            ctx.beginPath();
+            ctx.moveTo(x, y - size * 0.4);
+            ctx.lineTo(x, y + size * 0.2);
+            ctx.stroke();
+            
+            // Arms
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.4, y - size * 0.2);
+            ctx.lineTo(x, y - size * 0.1);
+            ctx.lineTo(x + size * 0.4, y - size * 0.2);
+            ctx.stroke();
+            
+            // Legs
+            ctx.beginPath();
+            ctx.moveTo(x, y + size * 0.2);
+            ctx.lineTo(x - size * 0.3, y + size * 0.6);
+            ctx.moveTo(x, y + size * 0.2);
+            ctx.lineTo(x + size * 0.3, y + size * 0.6);
+            ctx.stroke();
+            
+            // Gun
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + size * 0.4, y - size * 0.2);
+            ctx.lineTo(x + size * 0.6, y - size * 0.15);
+            ctx.stroke();
+        }
+
+        function draw() {
+            drawBackground();
+            
+            // Draw enemies
+            enemies.forEach(enemy => {
+                if (!enemy.dead) {
+                    drawStickman(enemy.x, enemy.y, enemy.size, enemy.color, enemy.health, enemy.maxHealth);
+                }
+            });
+            
+            // Draw bullets
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = bullet.color;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+            
+            // Draw particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                ctx.globalAlpha = 1;
+            });
+            
+            // Auto-fire indicator
+            if (autoFire && gameState === 'playing') {
+                ctx.fillStyle = '#00ff00';
+                ctx.font = '12px "Press Start 2P"';
+                ctx.fillText('AUTO-FIRE', 10, canvas.height - 10);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('kills').textContent = kills;
+            document.getElementById('wave').textContent = wave;
+            document.getElementById('combo').textContent = combo;
+            document.getElementById('health').textContent = health;
+            const accuracy = shotsFired > 0 ? Math.round((shotsHit / shotsFired) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy;
+        }
+
+        function gameLoop() {
+            if (gameState === 'playing') {
+                updateEnemies();
+                updateBullets();
+                updateParticles();
+                updateClouds();
+                
+                // Auto-fire
+                if (autoFire) {
+                    const now = Date.now();
+                    if (now - lastAutoFireTime > 300) {
+                        lastAutoFireTime = now;
+                        shoot();
+                    }
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function goBack() {
+            window.location.href = 'game_menu.html';
+        }
+
+        // Mouse/touch controls
+        canvas.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            updateCrosshair();
+        });
+
+        canvas.addEventListener('click', shoot);
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            cursorX = e.touches[0].clientX;
+            cursorY = e.touches[0].clientY;
+            updateCrosshair();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            cursorX = e.touches[0].clientX;
+            cursorY = e.touches[0].clientY;
+            shoot();
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') handleBlink();
+            if (e.key === 'a') autoFire = !autoFire;
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initEnvironment();
+        });
+
+        // Initialize
+        connectWebSocket();
+        initEnvironment();
+        updateCrosshair();
+        gameLoop();
+    </script>
+</body>
+</html>
